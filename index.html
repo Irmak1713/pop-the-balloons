@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pop the Balloons!</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(#87CEEB, #fff);
+      font-family: sans-serif;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 24px;
+      background: rgba(255,255,255,0.8);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <canvas id="balloonCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("balloonCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let balloons = [];
+    let score = 0;
+    const scoreDisplay = document.getElementById("score");
+
+    function randomColor() {
+      const colors = ["#ff6b6b", "#ffcc00", "#33cc99", "#3399ff", "#cc66ff"];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    class Balloon {
+      constructor() {
+        this.radius = 30;
+        this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
+        this.y = canvas.height + this.radius;
+        this.speed = Math.random() * 1.5 + 1;
+        this.color = randomColor();
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      update() {
+        this.y -= this.speed;
+        this.draw();
+      }
+    }
+
+    function spawnBalloon() {
+      balloons.push(new Balloon());
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      balloons.forEach((balloon, index) => {
+        balloon.update();
+
+        // Remove balloons that escape
+        if (balloon.y + balloon.radius < 0) {
+          balloons.splice(index, 1);
+        }
+      });
+
+      requestAnimationFrame(animate);
+    }
+
+    canvas.addEventListener("click", function(e) {
+      const clickX = e.clientX;
+      const clickY = e.clientY;
+
+      balloons.forEach((balloon, index) => {
+        const dist = Math.hypot(clickX - balloon.x, clickY - balloon.y);
+        if (dist < balloon.radius) {
+          // Pop!
+          balloons.splice(index, 1);
+          score++;
+          scoreDisplay.textContent = "Score: " + score;
+        }
+      });
+    });
+
+    setInterval(spawnBalloon, 800);
+    animate();
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
