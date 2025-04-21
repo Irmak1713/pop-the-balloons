@@ -1,153 +1,116 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Level Game</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kaçış Oyunu</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
 
-        .game-container {
-            position: relative;
-            width: 600px;
-            height: 400px;
-            background-color: #87CEFA;
-            overflow: hidden;
-            border: 2px solid #000;
-        }
+    #game {
+      width: 400px;
+      height: 600px;
+      background: #222;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid #fff;
+    }
 
-        .character {
-            position: absolute;
-            bottom: 20px;
-            left: 50px;
-            width: 40px;
-            height: 40px;
-            background-color: #FF6347;
-        }
+    #player {
+      width: 40px;
+      height: 40px;
+      background: #00f;
+      position: absolute;
+      bottom: 10px;
+      left: 180px;
+    }
 
-        .obstacle {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background-color: #2E8B57;
-            bottom: 0;
-            animation: moveObstacle 2s linear infinite;
-        }
+    #enemy {
+      width: 40px;
+      height: 40px;
+      background: #f00;
+      position: absolute;
+      top: -40px;
+      left: 180px;
+    }
 
-        @keyframes moveObstacle {
-            0% {
-                left: 600px;
-            }
-            100% {
-                left: -40px;
-            }
-        }
-
-        .score {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 20px;
-            color: #000;
-        }
-
-        .level {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 20px;
-            color: #000;
-        }
-    </style>
+    #score {
+      color: white;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-family: monospace;
+    }
+  </style>
 </head>
 <body>
+  <div id="game">
+    <div id="player"></div>
+    <div id="enemy"></div>
+    <div id="score">Skor: 0</div>
+  </div>
 
-    <div class="game-container">
-        <div class="character" id="character"></div>
-        <div class="score" id="score">Score: 0</div>
-        <div class="level" id="level">Level: 1</div>
-    </div>
+  <script>
+    const player = document.getElementById('player');
+    const enemy = document.getElementById('enemy');
+    const scoreDisplay = document.getElementById('score');
 
-    <script>
-        let score = 0;
-        let level = 1;
-        let speed = 2; // Obstacle speed
-        let character = document.getElementById('character');
-        let gameContainer = document.querySelector('.game-container');
-        let scoreDisplay = document.getElementById('score');
-        let levelDisplay = document.getElementById('level');
+    let score = 0;
+    let gameWidth = 400;
+    let gameInterval;
 
-        function createObstacle() {
-            let obstacle = document.createElement('div');
-            obstacle.classList.add('obstacle');
-            gameContainer.appendChild(obstacle);
-            obstacle.style.animationDuration = `${speed}s`;
-        }
+    document.addEventListener('keydown', (e) => {
+      const left = parseInt(window.getComputedStyle(player).getPropertyValue("left"));
+      if (e.key === "ArrowLeft" && left > 0) {
+        player.style.left = (left - 20) + "px";
+      }
+      if (e.key === "ArrowRight" && left < gameWidth - 40) {
+        player.style.left = (left + 20) + "px";
+      }
+    });
 
-        function checkCollision() {
-            let obstacles = document.querySelectorAll('.obstacle');
-            let characterRect = character.getBoundingClientRect();
+    function startGame() {
+      gameInterval = setInterval(() => {
+        let enemyLeft = Math.floor(Math.random() * (gameWidth - 40));
+        enemy.style.left = enemyLeft + "px";
+        enemy.style.top = "-40px";
 
-            obstacles.forEach(obstacle => {
-                let obstacleRect = obstacle.getBoundingClientRect();
-                if (
-                    characterRect.left < obstacleRect.left + obstacleRect.width &&
-                    characterRect.left + characterRect.width > obstacleRect.left &&
-                    characterRect.top < obstacleRect.top + obstacleRect.height &&
-                    characterRect.top + characterRect.height > obstacleRect.top
-                ) {
-                    alert(`Game Over! Final Score: ${score}`);
-                    resetGame();
-                }
-            });
-        }
-
-        function resetGame() {
-            score = 0;
-            level = 1;
-            speed = 2;
-            scoreDisplay.textContent = `Score: ${score}`;
-            levelDisplay.textContent = `Level: ${level}`;
-            document.querySelectorAll('.obstacle').forEach(obstacle => obstacle.remove());
-        }
-
-        function updateScore() {
+        let fall = setInterval(() => {
+          let enemyTop = parseInt(window.getComputedStyle(enemy).getPropertyValue("top"));
+          if (enemyTop < 600) {
+            enemy.style.top = (enemyTop + 5) + "px";
+          } else {
+            clearInterval(fall);
             score++;
-            scoreDisplay.textContent = `Score: ${score}`;
-            if (score % 10 === 0) {
-                level++;
-                speed *= 0.9; // Increase speed with each level
-                levelDisplay.textContent = `Level: ${level}`;
-            }
-        }
+            scoreDisplay.textContent = "Skor: " + score;
+          }
 
-        function moveCharacter(event) {
-            let characterRect = character.getBoundingClientRect();
-            if (event.key === 'ArrowUp' && characterRect.top > 0) {
-                character.style.top = `${character.offsetTop - 20}px`;
-            } else if (event.key === 'ArrowDown' && characterRect.bottom < gameContainer.offsetHeight) {
-                character.style.top = `${character.offsetTop + 20}px`;
-            }
-        }
+          // Çarpışma kontrolü
+          let playerLeft = parseInt(window.getComputedStyle(player).getPropertyValue("left"));
+          if (
+            enemyTop + 40 >= 560 &&
+            enemyLeft < playerLeft + 40 &&
+            enemyLeft + 40 > playerLeft
+          ) {
+            alert("Oyun Bitti! Skorun: " + score);
+            clearInterval(gameInterval);
+            location.reload();
+          }
+        }, 20);
+      }, 1000);
+    }
 
-        setInterval(() => {
-            createObstacle();
-            updateScore();
-            checkCollision();
-        }, 2000); // New obstacle every 2 seconds
-
-        document.addEventListener('keydown', moveCharacter);
-    </script>
-
+    startGame();
+  </script>
 </body>
 </html>
+
 
