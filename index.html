@@ -4,87 +4,86 @@
   <meta charset="UTF-8">
   <title>Cat Parkour Adventure</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
     body {
-      background-color: #87ceeb;
+      margin: 0;
+      background: linear-gradient(#87ceeb, #ffffff);
       font-family: 'Comic Sans MS', cursive;
       overflow: hidden;
     }
     #game {
       width: 800px;
       height: 400px;
-      background: linear-gradient(to top, #6ab04c 20%, #87ceeb 80%);
-      margin: 50px auto;
-      border: 4px solid #333;
+      background: url('https://i.imgur.com/t7S7Vxu.png') repeat-x bottom;
+      margin: 40px auto;
+      border: 4px solid #444;
       position: relative;
+      overflow: hidden;
     }
     .player {
-      width: 40px;
-      height: 40px;
-      background: url('https://emojicdn.elk.sh/🐱') no-repeat center/contain;
+      width: 50px;
+      height: 50px;
+      background: url('https://i.imgur.com/MFpMTx3.gif') no-repeat center/contain;
       position: absolute;
-      bottom: 50px;
       left: 50px;
+      bottom: 50px;
     }
     .platform {
       position: absolute;
-      background-color: #654321;
       height: 15px;
+      background-color: #8B4513;
     }
     .fish {
       width: 30px;
       height: 30px;
-      background: url('https://emojicdn.elk.sh/🐟') no-repeat center/contain;
+      background: url('https://i.imgur.com/RO0J1gS.png') no-repeat center/contain;
       position: absolute;
     }
-    #score {
+    #hud {
       position: absolute;
       top: 10px;
       left: 10px;
-      font-weight: bold;
-      font-size: 20px;
       color: white;
-      text-shadow: 1px 1px 2px black;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 18px;
+      z-index: 10;
     }
   </style>
 </head>
 <body>
   <div id="game">
-    <div id="score">Score: 0</div>
+    <div id="hud">Score: 0 | Highscore: 0 | Level: 1</div>
     <div class="player" id="player"></div>
     <div class="platform" style="left:0;bottom:0;width:800px;"></div>
+    <!-- Başlangıç platformları -->
     <div class="platform" style="left:150px;bottom:100px;width:100px;"></div>
     <div class="platform" style="left:300px;bottom:180px;width:100px;"></div>
     <div class="platform" style="left:500px;bottom:130px;width:100px;"></div>
     <div class="platform" style="left:650px;bottom:200px;width:100px;"></div>
-    <div class="fish" id="fish1" style="left:160px;bottom:130px;"></div>
-    <div class="fish" id="fish2" style="left:510px;bottom:160px;"></div>
+    <!-- Balıklar -->
+    <div class="fish" style="left:160px;bottom:130px;"></div>
+    <div class="fish" style="left:510px;bottom:160px;"></div>
   </div>
+
+  <audio id="jump-sound" src="https://freesound.org/data/previews/256/256113_3263906-lq.mp3"></audio>
+  <audio id="eat-sound" src="https://freesound.org/data/previews/341/341695_3248244-lq.mp3"></audio>
+  <audio id="music" src="https://freesound.org/data/previews/576/576008_13239811-lq.mp3" loop autoplay></audio>
 
   <script>
     const player = document.getElementById("player");
     const game = document.getElementById("game");
-    const fishes = [document.getElementById("fish1"), document.getElementById("fish2")];
-    const scoreDisplay = document.getElementById("score");
+    const hud = document.getElementById("hud");
+    const jumpSound = document.getElementById("jump-sound");
+    const eatSound = document.getElementById("eat-sound");
+    const music = document.getElementById("music");
 
-    let x = 50;
-    let y = 0;
-    let vx = 0;
-    let vy = 0;
-    let gravity = 1;
-    let isJumping = false;
-    let score = 0;
+    let x = 50, y = 0, vx = 0, vy = 0, gravity = 1, isJumping = false;
+    let score = 0, highscore = localStorage.getItem("highscore") || 0;
+    let level = 1;
 
-    const keys = {
-      ArrowLeft: false,
-      ArrowRight: false,
-      ArrowUp: false
-    };
-
+    const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false };
     document.addEventListener("keydown", e => keys[e.key] = true);
     document.addEventListener("keyup", e => keys[e.key] = false);
 
@@ -104,7 +103,6 @@
     }
 
     function gameLoop() {
-      // Hareket
       if (keys.ArrowLeft) vx = -4;
       else if (keys.ArrowRight) vx = 4;
       else vx = 0;
@@ -112,48 +110,77 @@
       if (keys.ArrowUp && !isJumping) {
         vy = 15;
         isJumping = true;
+        jumpSound.play();
       }
 
       vy -= gravity;
       x += vx;
       y += vy;
 
-      // Platform çarpışma kontrolü
       const platforms = document.querySelectorAll(".platform");
       platforms.forEach(p => {
-        if (detectCollision(x, y, 40, 40, p)) {
+        if (detectCollision(x, y, 50, 50, p)) {
           y = parseInt(p.style.bottom) + 15;
           vy = 0;
           isJumping = false;
         }
       });
 
-      // Sınırlar
       if (x < 0) x = 0;
-      if (x > 760) x = 760;
+      if (x > 750) x = 750;
       if (y < 0) {
         x = 50;
         y = 0;
         score = 0;
-        scoreDisplay.textContent = "Score: " + score;
+        level = 1;
+        document.querySelectorAll(".fish:not(:first-of-type)").forEach(f => f.remove());
+        document.querySelectorAll(".platform:not(:nth-child(-n+6))").forEach(p => p.remove());
       }
 
-      // Balık çarpışmaları
-      fishes.forEach(fish => {
-        if (fish && detectCollision(x, y, 40, 40, fish)) {
+      // Balık topla
+      document.querySelectorAll(".fish").forEach(fish => {
+        if (fish.style.display !== "none" && detectCollision(x, y, 50, 50, fish)) {
           fish.style.display = "none";
-          score += 1;
-          scoreDisplay.textContent = "Score: " + score;
+          eatSound.play();
+          score++;
+          if (score > highscore) {
+            highscore = score;
+            localStorage.setItem("highscore", highscore);
+          }
+
+          // Yeni seviye
+          if (score % 2 === 0) {
+            level++;
+            addLevel();
+          }
         }
       });
 
-      // Uygula
       player.style.left = x + "px";
       player.style.bottom = y + "px";
+      hud.textContent = `Score: ${score} | Highscore: ${highscore} | Level: ${level}`;
 
       requestAnimationFrame(gameLoop);
     }
 
+    function addLevel() {
+      const p = document.createElement("div");
+      p.className = "platform";
+      const left = Math.random() * 700;
+      const bottom = Math.random() * 200 + 100;
+      p.style.left = left + "px";
+      p.style.bottom = bottom + "px";
+      p.style.width = "100px";
+      game.appendChild(p);
+
+      const fish = document.createElement("div");
+      fish.className = "fish";
+      fish.style.left = (left + 10) + "px";
+      fish.style.bottom = (bottom + 30) + "px";
+      game.appendChild(fish);
+    }
+
+    music.volume = 0.3;
     gameLoop();
   </script>
 </body>
