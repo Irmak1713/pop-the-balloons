@@ -2,113 +2,159 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pop the Balloons!</title>
+  <title>Cat Parkour Adventure</title>
   <style>
-    body {
+    * {
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #87ceeb;
+      font-family: 'Comic Sans MS', cursive;
       overflow: hidden;
-      background: linear-gradient(#87CEEB, #fff);
-      font-family: sans-serif;
     }
-
-    canvas {
-      display: block;
+    #game {
+      width: 800px;
+      height: 400px;
+      background: linear-gradient(to top, #6ab04c 20%, #87ceeb 80%);
+      margin: 50px auto;
+      border: 4px solid #333;
+      position: relative;
     }
-
+    .player {
+      width: 40px;
+      height: 40px;
+      background: url('https://emojicdn.elk.sh/🐱') no-repeat center/contain;
+      position: absolute;
+      bottom: 50px;
+      left: 50px;
+    }
+    .platform {
+      position: absolute;
+      background-color: #654321;
+      height: 15px;
+    }
+    .fish {
+      width: 30px;
+      height: 30px;
+      background: url('https://emojicdn.elk.sh/🐟') no-repeat center/contain;
+      position: absolute;
+    }
     #score {
       position: absolute;
       top: 10px;
       left: 10px;
-      font-size: 24px;
-      background: rgba(255,255,255,0.8);
-      padding: 10px 20px;
-      border-radius: 10px;
       font-weight: bold;
+      font-size: 20px;
+      color: white;
+      text-shadow: 1px 1px 2px black;
     }
   </style>
 </head>
 <body>
-  <div id="score">Score: 0</div>
-  <canvas id="balloonCanvas"></canvas>
+  <div id="game">
+    <div id="score">Score: 0</div>
+    <div class="player" id="player"></div>
+    <div class="platform" style="left:0;bottom:0;width:800px;"></div>
+    <div class="platform" style="left:150px;bottom:100px;width:100px;"></div>
+    <div class="platform" style="left:300px;bottom:180px;width:100px;"></div>
+    <div class="platform" style="left:500px;bottom:130px;width:100px;"></div>
+    <div class="platform" style="left:650px;bottom:200px;width:100px;"></div>
+    <div class="fish" id="fish1" style="left:160px;bottom:130px;"></div>
+    <div class="fish" id="fish2" style="left:510px;bottom:160px;"></div>
+  </div>
 
   <script>
-    const canvas = document.getElementById("balloonCanvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    let balloons = [];
-    let score = 0;
+    const player = document.getElementById("player");
+    const game = document.getElementById("game");
+    const fishes = [document.getElementById("fish1"), document.getElementById("fish2")];
     const scoreDisplay = document.getElementById("score");
 
-    function randomColor() {
-      const colors = ["#ff6b6b", "#ffcc00", "#33cc99", "#3399ff", "#cc66ff"];
-      return colors[Math.floor(Math.random() * colors.length)];
+    let x = 50;
+    let y = 0;
+    let vx = 0;
+    let vy = 0;
+    let gravity = 1;
+    let isJumping = false;
+    let score = 0;
+
+    const keys = {
+      ArrowLeft: false,
+      ArrowRight: false,
+      ArrowUp: false
+    };
+
+    document.addEventListener("keydown", e => keys[e.key] = true);
+    document.addEventListener("keyup", e => keys[e.key] = false);
+
+    function detectCollision(px, py, pw, ph, el) {
+      const rect = el.getBoundingClientRect();
+      const gx = rect.left - game.getBoundingClientRect().left;
+      const gy = game.offsetHeight - (rect.bottom - game.getBoundingClientRect().top);
+      const gw = el.offsetWidth;
+      const gh = el.offsetHeight;
+
+      return (
+        px < gx + gw &&
+        px + pw > gx &&
+        py < gy + gh &&
+        py + ph > gy
+      );
     }
 
-    class Balloon {
-      constructor() {
-        this.radius = 30;
-        this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
-        this.y = canvas.height + this.radius;
-        this.speed = Math.random() * 1.5 + 1;
-        this.color = randomColor();
+    function gameLoop() {
+      // Hareket
+      if (keys.ArrowLeft) vx = -4;
+      else if (keys.ArrowRight) vx = 4;
+      else vx = 0;
+
+      if (keys.ArrowUp && !isJumping) {
+        vy = 15;
+        isJumping = true;
       }
 
-      draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.closePath();
-      }
+      vy -= gravity;
+      x += vx;
+      y += vy;
 
-      update() {
-        this.y -= this.speed;
-        this.draw();
-      }
-    }
-
-    function spawnBalloon() {
-      balloons.push(new Balloon());
-    }
-
-    function animate() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      balloons.forEach((balloon, index) => {
-        balloon.update();
-
-        // Remove balloons that escape
-        if (balloon.y + balloon.radius < 0) {
-          balloons.splice(index, 1);
+      // Platform çarpışma kontrolü
+      const platforms = document.querySelectorAll(".platform");
+      platforms.forEach(p => {
+        if (detectCollision(x, y, 40, 40, p)) {
+          y = parseInt(p.style.bottom) + 15;
+          vy = 0;
+          isJumping = false;
         }
       });
 
-      requestAnimationFrame(animate);
-    }
+      // Sınırlar
+      if (x < 0) x = 0;
+      if (x > 760) x = 760;
+      if (y < 0) {
+        x = 50;
+        y = 0;
+        score = 0;
+        scoreDisplay.textContent = "Score: " + score;
+      }
 
-    canvas.addEventListener("click", function(e) {
-      const clickX = e.clientX;
-      const clickY = e.clientY;
-
-      balloons.forEach((balloon, index) => {
-        const dist = Math.hypot(clickX - balloon.x, clickY - balloon.y);
-        if (dist < balloon.radius) {
-          // Pop!
-          balloons.splice(index, 1);
-          score++;
+      // Balık çarpışmaları
+      fishes.forEach(fish => {
+        if (fish && detectCollision(x, y, 40, 40, fish)) {
+          fish.style.display = "none";
+          score += 1;
           scoreDisplay.textContent = "Score: " + score;
         }
       });
-    });
 
-    setInterval(spawnBalloon, 800);
-    animate();
+      // Uygula
+      player.style.left = x + "px";
+      player.style.bottom = y + "px";
 
-    window.addEventListener("resize", () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    });
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
   </script>
 </body>
 </html>
